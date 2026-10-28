@@ -1,0 +1,20 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const { profile, pages } = content;
+---
+<MainLayout title={`About — ${profile.brand}`} description={pages.aboutIntro}>
+  <section class="container-shell py-16 sm:py-24">
+    <p class="eyebrow mb-3">A little about me</p><h1 class="section-title text-5xl sm:text-6xl">The person behind <span class="lime">D4.</span></h1>
+    <div class="mt-8 grid gap-6 md:grid-cols-[1.2fr_.8fr]">
+      <article class="panel p-6 sm:p-8"><h2 class="mb-4 text-xl font-bold">Who am I?</h2><p class="leading-8 text-slate-300">{profile.bio}</p><p class="mt-4 leading-8 text-slate-400">{profile.aboutExtra}</p>{profile.location && <p class="mt-4 text-sm text-slate-500">Based in {profile.location}</p>}</article>
+      <article class="panel p-6 sm:p-8"><p class="eyebrow mb-3">My mindset</p><p class="whitespace-pre-line text-2xl font-semibold leading-snug">{pages.aboutMindset.split("\n").map((line,i)=><span class="block">{i===1?<span class="lime">{line}</span>:line}</span>)}</p><p class="mt-5 text-sm leading-6 text-slate-400">This site will grow alongside my skills and projects.</p></article>
+    </div>
+    <div class="mt-12 grid gap-6 md:grid-cols-2">
+      <section class="panel p-6"><h2 class="mb-5 text-xl font-bold">Skills & tools</h2><div class="flex flex-wrap gap-2">{profile.skills.map(skill => <span class="rounded-lg border border-white/10 px-3 py-2 text-sm">{skill}</span>)}</div></section>
+      <section class="panel p-6"><h2 class="mb-5 text-xl font-bold">Things I like</h2><div class="flex flex-wrap gap-2">{profile.interests.map(item => <span class="rounded-lg border border-white/10 px-3 py-2 text-sm">{item}</span>)}</div></section>
+    </div>
+    <section class="panel mt-6 p-6"><h2 class="mb-3 text-xl font-bold">On repeat 🎧</h2><p class="text-slate-400">Artists I enjoy listening to:</p><div class="mt-4 flex flex-wrap gap-2">{profile.musicArtists.map(artist => <span class="rounded-full bg-white/[.05] px-4 py-2 text-sm">{artist}</span>)}</div></section>
+  </section>
+</MainLayout>

@@ -1,0 +1,43 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const profile = content.profile;
+---
+<MainLayout title={`Contact — ${profile.brand}`} description={content.pages.contactIntro}>
+  <section class="container-shell py-16 sm:py-24">
+    <p class="eyebrow mb-3">Open a conversation</p><h1 class="section-title text-5xl sm:text-6xl">Say <span class="lime">hello.</span></h1>
+    <p class="mt-5 max-w-xl leading-7 text-slate-400">{content.pages.contactIntro}</p>
+    <div class="mt-9 grid gap-4 sm:grid-cols-3">{profile.socials.map(social => <a class="panel flex items-center justify-between p-5 transition hover:border-[#b8f36b]/40" href={social.href} target="_blank" rel="noreferrer"><span class="font-semibold">{social.label}</span><span class="lime">↗</span></a>)}</div>
+    <div class="panel mt-8 max-w-2xl p-6 sm:p-8">
+      <h2 class="text-xl font-bold">Send a message</h2><p class="mt-2 text-sm leading-6 text-slate-400">Your message is sent to the private website inbox. Please don't include passwords or other sensitive information.</p>
+      <form class="mt-6 space-y-4" id="contact-form">
+        <div><label class="mb-2 block text-sm text-slate-300" for="name">Your name</label><input class="field" id="name" name="name" autocomplete="name" maxlength="100" placeholder="Name" required /></div>
+        <div><label class="mb-2 block text-sm text-slate-300" for="email">Your email (optional)</label><input class="field" id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" /></div>
+        <div><label class="mb-2 block text-sm text-slate-300" for="message">Message</label><textarea class="field min-h-32" id="message" name="message" maxlength="5000" placeholder="Write your message..." required></textarea></div>
+        <div class="hidden" aria-hidden="true"><label for="website">Leave this field empty</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+        <button class="btn-primary" type="submit">Send message ↗</button><p id="contact-status" role="status" class="text-sm text-slate-400"></p>
+      </form>
+    </div>
+  </section>
+  <script>
+    import { createClient } from "@supabase/supabase-js";
+    const form = document.querySelector<HTMLFormElement>("#contact-form")!;
+    const status = document.querySelector<HTMLElement>("#contact-status")!;
+    const url = import.meta.env.PUBLIC_SUPABASE_URL || "";
+    const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "";
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      if (String(data.get("website") || "").trim()) { status.textContent = "Thanks!"; form.reset(); return; }
+      if (!url || !key || url.includes("YOUR-PROJECT")) { status.textContent = "Contact inbox is not configured yet. Please use one of the social links."; return; }
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      button.disabled = true; status.textContent = "Sending…";
+      const supabase = createClient(url,key,{auth:{persistSession:false}});
+      const {error} = await supabase.from("contact_messages").insert({name:String(data.get("name")||"").trim(),email:String(data.get("email")||"").trim(),message:String(data.get("message")||"").trim()});
+      button.disabled = false;
+      if(error) status.textContent = "Could not send the message. Please try a social link instead.";
+      else { status.textContent = "Message sent. Thanks for reaching out!"; form.reset(); }
+    });
+  </script>
+</MainLayout>

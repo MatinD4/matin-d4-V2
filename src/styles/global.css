@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --panel: #11151a;
+  --panel-2: #171c22;
+  --line: rgba(255,255,255,.09);
+  --muted: #929ba7;
+  --text: #f1f5f9;
+  --lime: #b8f36b;
+  --font-en: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-fa: Vazirmatn, sans-serif;
+  --radius: 20px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 82% 0%, color-mix(in srgb, var(--lime) 7%, transparent), transparent 35rem), var(--bg);
+  color: var(--text);
+  font-family: var(--font-en);
+}
+:lang(fa), [dir="rtl"] { font-family: var(--font-fa); }
+::selection { background: var(--lime); color: #111318; }
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select { font: inherit; }
+.container-shell { width: min(1080px, calc(100% - 40px)); margin-inline: auto; }
+.panel { background: color-mix(in srgb, var(--panel) 86%, transparent); border: 1px solid var(--line); border-radius: var(--radius); }
+.muted { color: var(--muted); }
+.lime { color: var(--lime); }
+.btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; background:var(--lime); color:#111318; border-radius:12px; padding:.8rem 1.05rem; font-weight:750; transition:transform .18s ease, filter .18s ease; }
+.btn-primary:hover { transform:translateY(-2px); filter:brightness(1.04); }
+.btn-secondary { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:12px; padding:.8rem 1.05rem; color:var(--text); transition:border-color .18s ease; }
+.btn-secondary:hover { border-color:color-mix(in srgb, var(--lime) 55%, transparent); }
+.eyebrow { color:var(--lime); font:600 .78rem var(--font-en); letter-spacing:.13em; text-transform:uppercase; }
+.section-title { font-size:clamp(1.7rem,3vw,2.35rem); letter-spacing:-.045em; font-weight:750; }
+.field { width:100%; background:#0c0f13; border:1px solid var(--line); color:var(--text); border-radius:11px; padding:.8rem .9rem; outline:none; }
+.field:focus { border-color:color-mix(in srgb, var(--lime) 70%, transparent); }
+@media (max-width: 640px) { .container-shell { width:min(100% - 28px,1080px); } }
+/* Keep legacy accent utilities in sync with the admin-selected accent. */
+.text-\[\#b8f36b\] { color: var(--lime) !important; }
+.bg-\[\#b8f36b\] { background-color: var(--lime) !important; }
+.border-\[\#b8f36b\]\/30, .border-\[\#b8f36b\]\/40, .border-\[\#b8f36b\]\/50 { border-color: color-mix(in srgb, var(--lime) 45%, transparent) !important; }

@@ -1,0 +1,59 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const tracks = content.tracks;
+---
+<MainLayout title={`Music Room — ${content.profile.brand}`} description="A small music room on Matin D4's personal website.">
+  <section class="container-shell py-16 sm:py-24">
+    <p class="eyebrow mb-3">Headphones recommended</p><h1 class="section-title text-5xl sm:text-6xl">My music <span class="lime">room.</span></h1>
+    <p class="mt-5 max-w-xl leading-7 text-slate-400">{content.pages.musicIntro || `Music I enjoy: ${content.profile.musicArtists.join(", ")}.`}</p>
+    <div id="music-root" data-tracks={JSON.stringify(tracks)} class="panel mx-auto mt-10 max-w-2xl p-5 sm:p-8">
+      <div class="flex flex-col gap-6 sm:flex-row">
+        <div id="cover" class="grid aspect-square w-full max-w-[220px] shrink-0 place-items-center self-center overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_25%,rgba(184,243,107,.3),transparent_45%),#171c22]"><span class="font-mono text-5xl font-black lime">D4</span></div>
+        <div class="flex min-w-0 flex-1 flex-col justify-center">
+          <p class="eyebrow">Now playing</p><h2 id="track-title" class="mt-2 text-2xl font-bold">Your music collection</h2><p id="track-artist" class="mt-1 text-sm text-slate-400">Add your tracks in the control room</p>
+          <audio id="audio" preload="metadata" class="hidden"></audio>
+          <div class="mt-6"><input id="seek" aria-label="Track progress" type="range" min="0" max="100" value="0" class="w-full accent-[#b8f36b]"/><div class="flex justify-between text-xs text-slate-500"><span id="current-time">0:00</span><span id="duration">0:00</span></div></div>
+          <div class="mt-5 flex items-center justify-center gap-5"><button id="prev" class="btn-secondary" aria-label="Previous track">|◀</button><button id="play" class="btn-primary min-w-28" aria-label="Play or pause">▶ Play</button><button id="next" class="btn-secondary" aria-label="Next track">▶|</button></div>
+          <p id="player-note" class="mt-4 text-center text-xs text-slate-500">No audio files configured yet.</p>
+        </div>
+      </div>
+      <div class="mt-8 border-t border-white/10 pt-5"><h3 class="mb-3 text-sm font-semibold">Playlist</h3><div id="playlist" class="space-y-2"></div></div>
+    </div>
+  </section>
+  <script>
+    const root = document.querySelector<HTMLElement>("#music-root")!;
+    const tracks = JSON.parse(root.dataset.tracks || "[]") as Array<{title:string;artist:string;src?:string;cover?:string;link?:string}>;
+    const audio = document.querySelector<HTMLAudioElement>("#audio")!;
+    const playButton = document.querySelector<HTMLButtonElement>("#play")!;
+    const seek = document.querySelector<HTMLInputElement>("#seek")!;
+    const title = document.querySelector<HTMLElement>("#track-title")!;
+    const artist = document.querySelector<HTMLElement>("#track-artist")!;
+    const note = document.querySelector<HTMLElement>("#player-note")!;
+    const playlist = document.querySelector<HTMLElement>("#playlist")!;
+    const time = (seconds: number) => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2, "0")}`;
+    const playable = tracks.filter(track => track.src && /^https?:\/\//i.test(track.src));
+    let current = 0;
+    function load(index: number) {
+      if (!playable.length) return;
+      current = (index + playable.length) % playable.length;
+      const track = playable[current]; audio.src = track.src!; title.textContent = track.title; artist.textContent = track.artist;
+      const cover = document.querySelector<HTMLElement>("#cover")!; cover.replaceChildren();
+      if(track.cover){const img=document.createElement("img");img.src=track.cover;img.alt="Track cover";img.className="h-full w-full object-cover";cover.appendChild(img);}else{const span=document.createElement("span");span.className="font-mono text-5xl font-black lime";span.textContent="D4";cover.appendChild(span);}
+      [...playlist.children].forEach((item, i) => item.classList.toggle("border-[#b8f36b]/50", i === current));
+    }
+    function renderPlaylist() {
+      if (!playable.length) { playlist.innerHTML = '<p class="rounded-lg border border-dashed border-white/10 p-4 text-sm text-slate-500">No playable tracks yet. Add a public audio URL in the private control room.</p>'; playButton.disabled = true; playButton.classList.add("opacity-50"); note.textContent = tracks.length ? "Add a valid public audio URL to each track." : "No tracks configured yet."; return; }
+      playlist.replaceChildren(); playable.forEach((track, i) => { const button=document.createElement("button"); button.className="flex w-full items-center justify-between gap-4 rounded-lg border border-white/10 px-4 py-3 text-left text-sm hover:border-[#b8f36b]/40"; button.textContent=`${String(i+1).padStart(2,"0")}  ${track.title} — ${track.artist}`; button.addEventListener("click",async()=>{load(i);try{await audio.play();}catch{note.textContent="Playback failed. Check the audio URL.";}}); playlist.appendChild(button); }); load(0); note.textContent="Ready to play.";
+    }
+    playButton.addEventListener("click",async()=>{if(!playable.length)return;if(audio.paused){try{await audio.play();}catch{note.textContent="Playback failed. Check the audio URL.";}}else audio.pause();});
+    document.querySelector("#prev")?.addEventListener("click",()=>{if(playable.length){load(current-1);audio.play().catch(()=>{});}});
+    document.querySelector("#next")?.addEventListener("click",()=>{if(playable.length){load(current+1);audio.play().catch(()=>{});}});
+    audio.addEventListener("timeupdate",()=>{seek.value=audio.duration?String(audio.currentTime/audio.duration*100):"0";document.querySelector("#current-time")!.textContent=time(audio.currentTime);document.querySelector("#duration")!.textContent=time(audio.duration);});
+    seek.addEventListener("input",()=>{if(audio.duration)audio.currentTime=Number(seek.value)/100*audio.duration;});
+    audio.addEventListener("ended",()=>{if(playable.length){load(current+1);audio.play().catch(()=>{});}});
+    audio.addEventListener("pause",()=>{playButton.textContent="▶ Play";}); audio.addEventListener("play",()=>{playButton.textContent="Ⅱ Pause";});
+    renderPlaylist();
+  </script>
+</MainLayout>

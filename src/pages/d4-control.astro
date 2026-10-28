@@ -1,0 +1,167 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || "";
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "";
+---
+<MainLayout title="Control room — Matin D4" description="Private site management.">
+  <div id="admin-app" data-initial={JSON.stringify(content)} data-supabase-url={supabaseUrl} data-supabase-key={supabaseKey} class="container-shell py-10 sm:py-14">
+    <section id="login-view" class="mx-auto max-w-md panel p-6 sm:p-8">
+      <div class="mb-6 flex items-center gap-3"><span class="grid h-12 w-12 place-items-center rounded-xl bg-[#b8f36b] font-mono text-lg font-black text-[#111318]">D4</span><div><p class="eyebrow">Private workspace</p><h1 class="text-2xl font-bold">Control room</h1></div></div>
+      <p class="mb-6 text-sm leading-6 text-slate-400">Sign in with your approved administrator account. This area is protected by Supabase authentication and database permissions.</p>
+      <form id="login-form" class="space-y-4">
+        <div><label for="login-email" class="mb-2 block text-sm text-slate-300">Admin email</label><input class="field" id="login-email" type="email" autocomplete="username" required /></div>
+        <div><label for="login-password" class="mb-2 block text-sm text-slate-300">Password</label><input class="field" id="login-password" type="password" autocomplete="current-password" required /></div>
+        <button class="btn-primary w-full" type="submit">Sign in securely</button><p id="login-status" role="status" class="text-sm text-slate-400"></p>
+      </form>
+      <p class="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-500">No public registration is available here. Your user must be created in Supabase and explicitly approved as an admin.</p>
+    </section>
+    <section id="dashboard-view" class="hidden">
+      <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p class="eyebrow mb-2">Matin D4 · management</p><h1 class="text-3xl font-black sm:text-4xl">Control <span class="lime">room.</span></h1><p id="admin-identity" class="mt-2 text-sm text-slate-400"></p></div><div class="flex flex-wrap gap-3"><a href="/" class="btn-secondary">View website ↗</a><button id="save-all" class="btn-primary">Save changes</button><button id="logout" class="btn-secondary">Sign out</button></div></header>
+      <p id="save-status" role="status" class="mb-5 text-sm text-slate-400">Loading your workspace…</p>
+      <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav id="admin-tabs" class="panel flex gap-2 overflow-x-auto p-3 lg:flex-col lg:self-start" aria-label="Admin sections">
+          <button data-tab="overview" class="admin-tab active">Overview</button><button data-tab="branding" class="admin-tab">Branding & fonts</button><button data-tab="profile" class="admin-tab">Profile & socials</button><button data-tab="home" class="admin-tab">Homepage & SEO</button><button data-tab="projects" class="admin-tab">Projects</button><button data-tab="music" class="admin-tab">Playlist</button><button data-tab="blog" class="admin-tab">Blog posts</button><button data-tab="messages" class="admin-tab">Messages <span id="message-count" class="ml-1 text-xs lime"></span></button>
+        </nav>
+        <section id="admin-panel" class="min-w-0"></section>
+      </div>
+    </section>
+  </div>
+  <style>
+    .admin-tab { flex-shrink:0; border:1px solid transparent; border-radius:10px; padding:.75rem .9rem; text-align:left; color:#aab3bf; font-size:.9rem; }
+    .admin-tab:hover { background:rgba(255,255,255,.04); color:#fff; }
+    .admin-tab.active { background:rgba(184,243,107,.1); border-color:rgba(184,243,107,.25); color:var(--lime); }
+    .admin-card { border:1px solid var(--line); background:rgba(17,21,26,.82); border-radius:16px; padding:1.1rem; }
+    .admin-label { display:block; margin-bottom:.4rem; font-size:.82rem; color:#b7c0cb; }
+    .admin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:1rem; }
+    .admin-input { width:100%; border:1px solid var(--line); background:#0c0f13; color:#f1f5f9; border-radius:10px; padding:.72rem .8rem; }
+    .admin-input:focus { outline:1px solid var(--lime); border-color:var(--lime); }
+    .admin-hint { margin-top:.35rem; font-size:.75rem; line-height:1.4; color:#7e8997; }
+    .admin-action { border:1px solid var(--line); border-radius:9px; padding:.55rem .75rem; font-size:.82rem; color:#dbe3eb; }
+    .admin-action:hover { border-color:var(--lime); }
+    .admin-danger { color:#fca5a5; }
+  </style>
+  <script>
+    import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+    import type { SiteContent } from "../lib/content";
+    const app = document.querySelector<HTMLElement>("#admin-app")!;
+    const loginView = document.querySelector<HTMLElement>("#login-view")!;
+    const dashboard = document.querySelector<HTMLElement>("#dashboard-view")!;
+    const loginForm = document.querySelector<HTMLFormElement>("#login-form")!;
+    const loginStatus = document.querySelector<HTMLElement>("#login-status")!;
+    const panel = document.querySelector<HTMLElement>("#admin-panel")!;
+    const status = document.querySelector<HTMLElement>("#save-status")!;
+    const supabaseUrl = app.dataset.supabaseUrl || "";
+    const supabaseKey = app.dataset.supabaseKey || "";
+    let supabase: SupabaseClient | null = null;
+    let content = JSON.parse(app.dataset.initial || "{}") as SiteContent;
+    let activeTab = "overview";
+    let messages: Array<{id:string;name:string;email:string;message:string;created_at:string;read_at:string|null}> = [];
+    const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[char]!));
+    const field = (label:string, path:string, value:unknown, type="text", hint="") => `<label><span class="admin-label">${escapeHtml(label)}</span><input class="admin-input" data-bind="${escapeHtml(path)}" type="${type}" value="${escapeHtml(value)}">${hint ? `<p class="admin-hint">${escapeHtml(hint)}</p>` : ""}</label>`;
+    const area = (label:string, path:string, value:unknown, hint="") => `<label><span class="admin-label">${escapeHtml(label)}</span><textarea class="admin-input" data-bind="${escapeHtml(path)}" rows="4">${escapeHtml(value)}</textarea>${hint ? `<p class="admin-hint">${escapeHtml(hint)}</p>` : ""}</label>`;
+    const check = (label:string, path:string, value:boolean) => `<label class="flex items-center gap-3 text-sm text-slate-300"><input data-bind="${escapeHtml(path)}" type="checkbox" ${value ? "checked" : ""} class="h-4 w-4 accent-[#b8f36b]">${escapeHtml(label)}</label>`;
+    const section = (title:string, description:string, inner:string) => `<div class="space-y-5"><div><h2 class="text-2xl font-bold">${escapeHtml(title)}</h2><p class="mt-2 text-sm leading-6 text-slate-400">${escapeHtml(description)}</p></div>${inner}</div>`;
+    const card = (title:string, inner:string) => `<section class="admin-card"><h3 class="mb-4 text-lg font-bold">${escapeHtml(title)}</h3>${inner}</section>`;
+    function setPath(path:string, value:unknown) { const keys = path.split("."); let ref: any = content; for (const key of keys.slice(0,-1)) ref = ref[key]; ref[keys[keys.length-1]] = value; }
+    function getPath(path:string):any { return path.split(".").reduce((v:any,k)=>v?.[k],content); }
+    function collectInputs() { panel.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>("[data-bind]").forEach(el => { const path = el.dataset.bind!; const value = el instanceof HTMLInputElement && el.type === "checkbox" ? el.checked : el.value; setPath(path,value); }); }
+    function projectCard(project:any,index:number) { return `<article class="admin-card space-y-4"><div class="flex items-center justify-between gap-3"><h3 class="font-bold">Project ${index+1}</h3><button class="admin-action admin-danger" data-remove="projects.${index}">Delete</button></div>${project.image ? `<img class="max-h-44 w-full rounded-lg object-cover" src="${escapeHtml(project.image)}" alt="">` : `<div class="grid h-24 place-items-center rounded-lg border border-dashed border-white/10 text-xs text-slate-500">No screenshot yet</div>`}<label class="block"><span class="admin-label">Upload screenshot</span><input type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" data-upload="projects.${index}.image" class="block w-full text-xs text-slate-400"></label><div class="admin-grid">${field("Name",`projects.${index}.name`,project.name)}${field("Status",`projects.${index}.status`,project.status)}${field("Project URL",`projects.${index}.url`,project.url||"","url")}${field("Repository URL",`projects.${index}.repo`,project.repo||"","url")}</div>${area("Description",`projects.${index}.description`,project.description)}${field("Tags (comma-separated)",`projects.${index}.tags`,(project.tags||[]).join(", "))}${check("Feature on homepage",`projects.${index}.featured`,project.featured !== false)}</article>`; }
+    function trackCard(track:any,index:number) { return `<article class="admin-card space-y-4"><div class="flex items-center justify-between gap-3"><h3 class="font-bold">Track ${index+1}</h3><button class="admin-action admin-danger" data-remove="tracks.${index}">Delete</button></div><div class="admin-grid">${field("Track title",`tracks.${index}.title`,track.title)}${field("Artist",`tracks.${index}.artist`,track.artist)}${field("Audio URL or path",`tracks.${index}.src`,track.src||"","text","Upload licensed audio to a suitable host and paste its public URL. This panel currently uploads images only.")}${field("External link",`tracks.${index}.link`,track.link||"","url")}</div>${track.cover ? `<img class="h-24 w-24 rounded-xl object-cover" src="${escapeHtml(track.cover)}" alt="Cover">` : ""}<label class="block"><span class="admin-label">Upload cover image</span><input type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" data-upload="tracks.${index}.cover" class="block w-full text-xs text-slate-400"></label><p class="admin-hint">Only add audio you own or are licensed to share.</p></article>`; }
+    function postCard(post:any,index:number) { return `<article class="admin-card space-y-4"><div class="flex items-center justify-between gap-3"><h3 class="font-bold">Post ${index+1}</h3><button class="admin-action admin-danger" data-remove="posts.${index}">Delete</button></div><div class="admin-grid">${field("Title",`posts.${index}.title`,post.title)}${field("Slug",`posts.${index}.slug`,post.slug)}${field("Publication date",`posts.${index}.date`,post.date||new Date().toISOString().slice(0,10),"date")}</div>${area("Short excerpt",`posts.${index}.excerpt`,post.excerpt)}${area("Post body (plain text; line breaks preserved)",`posts.${index}.body`,post.body)}${field("Tags (comma-separated)",`posts.${index}.tags`,(post.tags||[]).join(", "))}${check("Published publicly",`posts.${index}.published`,!!post.published)}${post.cover ? `<img class="max-h-36 rounded-lg" src="${escapeHtml(post.cover)}" alt="">` : ""}<label class="block"><span class="admin-label">Cover image</span><input type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" data-upload="posts.${index}.cover" class="block w-full text-xs text-slate-400"></label></article>`; }
+    function render() {
+      const p = content.profile; const h = content.homepage; const t = content.theme; const seo = content.seo;
+      if (activeTab === "overview") {
+        panel.innerHTML = section("Your website at a glance","The live site reads these settings from Supabase. Save after making edits.",`<div class="admin-grid">${card("Projects",`<p class="text-3xl font-black lime">${content.projects.length}</p><p class="mt-1 text-sm text-slate-400">Manage previews, tags, links and featured work.</p>`)}${card("Playlist",`<p class="text-3xl font-black lime">${content.tracks.length}</p><p class="mt-1 text-sm text-slate-400">Manage track metadata, cover art and audio URLs.</p>`)}${card("Blog posts",`<p class="text-3xl font-black lime">${content.posts.length}</p><p class="mt-1 text-sm text-slate-400">Draft or publish posts for your personal site.</p>`)}${card("Theme",`<div class="flex items-center gap-3"><span class="h-9 w-9 rounded-lg border border-white/10" style="background:${escapeHtml(t.accent)}"></span><div><p class="font-semibold">${escapeHtml(t.accent)}</p><p class="text-xs text-slate-400">Current accent color</p></div></div>`)}</div><div class="admin-card"><h3 class="font-bold">Before going public</h3><ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-400"><li>Run the SQL setup in <code>supabase/schema.sql</code>.</li><li>Create your own user in Supabase Auth, then add its UUID to <code>admin_users</code>.</li><li>Set the two public Supabase environment variables in Vercel and redeploy.</li><li>Keep sign-ups disabled and never add a service-role key to this site.</li></ul></div>`);
+      } else if (activeTab === "branding") {
+        panel.innerHTML = section("Branding & fonts","Customize the visual identity. Use a hex color such as #b8f36b.",`${card("Logo",`${p.logo ? `<img src="${escapeHtml(p.logo)}" alt="Current logo" class="mb-4 h-20 w-20 rounded-xl object-contain">` : `<div class="mb-4 grid h-20 w-20 place-items-center rounded-xl bg-[var(--lime)] font-mono text-2xl font-black text-black">D4</div>`}<label><span class="admin-label">Upload site logo</span><input type="file" accept="image/png,image/jpeg,image/webp,image/avif" data-upload="profile.logo" class="block w-full text-xs text-slate-400"></label>${field("Brand label","profile.brand",p.brand)}${field("Site logo URL (optional)","profile.logo",p.logo||"","url")}`)}<div class="admin-grid">${card("Colors",`<div class="admin-grid">${field("Accent color","theme.accent",t.accent,"color","Pick the main highlight color.")}${field("Page background","theme.background",t.background,"color")}${field("Card / panel color","theme.panel",t.panel,"color")}</div>${field("Corner radius (px)","theme.radius",t.radius,"number")}`)}${card("Typography",`<div class="space-y-4"><label><span class="admin-label">English font</span><select class="admin-input" data-bind="theme.fontEnglish">${["Inter","Space Grotesk","Manrope","DM Sans","Outfit"].map(v=>`<option ${t.fontEnglish===v?"selected":""}>${v}</option>`).join("")}</select></label><label><span class="admin-label">Persian / Arabic font</span><select class="admin-input" data-bind="theme.fontPersian">${["Vazirmatn","Noto Sans Arabic","IBM Plex Sans Arabic","Estedad"].map(v=>`<option ${t.fontPersian===v?"selected":""}>${v}</option>`).join("")}</select></label><p class="admin-hint">Recommended pairing: Inter + Vazirmatn. Fonts are loaded from Google Fonts on visitors' browsers.</p></div>`)}</div>`);
+      } else if (activeTab === "profile") {
+        panel.innerHTML = section("Profile & socials","Edit the identity, biography, interests and public links shown around the site.",`${card("Profile",`<div class="admin-grid">${field("Display name","profile.name",p.name)}${field("Role / title","profile.role",p.role)}${field("Tagline","profile.tagline",p.tagline||"")}${field("Location (optional)","profile.location",p.location||"")}${field("Availability status","profile.availability",p.availability||"")}</div>${area("Short biography","profile.bio",p.bio)}${area("About page extra paragraph","profile.aboutExtra",p.aboutExtra||"")}${field("Skills (comma-separated)","profile.skills",p.skills.join(", "))}${field("Interests (comma-separated)","profile.interests",p.interests.join(", "))}${field("Favorite artists (comma-separated)","profile.musicArtists",p.musicArtists.join(", "))}`)}${card("Social links",`${p.socials.map((s,i)=>`<div class="admin-grid mb-3">${field("Label",`profile.socials.${i}.label`,s.label)}${field("URL",`profile.socials.${i}.href`,s.href,"url")}<button class="admin-action admin-danger self-end" data-remove="profile.socials.${i}">Remove</button></div>`).join("")}<button class="admin-action" data-add="social">+ Add social link</button>`)}`);
+      } else if (activeTab === "home") {
+        panel.innerHTML = section("Homepage & SEO","Change the hero copy, buttons, home page sections and search engine metadata.",`${card("Homepage hero",`${field("Eyebrow","homepage.eyebrow",h.eyebrow)}${area("Main headline (new lines allowed)","homepage.headline",h.headline)}${area("Intro text","homepage.subheadline",h.subheadline)}${field("Status pill","homepage.status",h.status)}<div class="admin-grid">${field("Primary button","homepage.ctaPrimary",h.ctaPrimary)}${field("Secondary button","homepage.ctaSecondary",h.ctaSecondary)}</div>${check("Show code-style profile card","homepage.showCodeCard",h.showCodeCard)}${field("Contact CTA title","homepage.contactTitle",h.contactTitle)}${area("Contact CTA description","homepage.contactText",h.contactText)}`)}${card("Page copy",`${area("About page intro","pages.aboutIntro",content.pages.aboutIntro)}${area("About mindset (new lines allowed)","pages.aboutMindset",content.pages.aboutMindset)}${area("Projects page intro","pages.projectsIntro",content.pages.projectsIntro)}${area("Music page intro","pages.musicIntro",content.pages.musicIntro)}${area("Contact page intro","pages.contactIntro",content.pages.contactIntro)}`)}${card("SEO metadata",`<div class="space-y-4">${field("Default page title","seo.title",seo.title)}${area("Meta description","seo.description",seo.description)}${field("Keywords","seo.keywords",seo.keywords)}${field("Open Graph image URL","seo.ogImage",seo.ogImage,"url")}</div>`)}`);
+      } else if (activeTab === "projects") {
+        panel.innerHTML = section("Projects","Manage portfolio cards. Upload screenshots, edit details, add external links, and choose which projects appear on the homepage.",`<div class="flex justify-end"><button class="btn-secondary" data-add="project">+ Add project</button></div><div class="space-y-4">${content.projects.map(projectCard).join("")}</div>`);
+      } else if (activeTab === "music") {
+        panel.innerHTML = section("Playlist","Manage playlist metadata and cover images. For audio, use a URL to a file you have permission to distribute.",`<div class="flex justify-end"><button class="btn-secondary" data-add="track">+ Add track</button></div><div class="space-y-4">${content.tracks.map(trackCard).join("")}</div>`);
+      } else if (activeTab === "blog") {
+        panel.innerHTML = section("Blog posts","Create drafts and publish short articles. Published posts can be surfaced on a blog page in a later step; this version saves the complete content in the CMS.",`<div class="flex justify-end"><button class="btn-secondary" data-add="post">+ Add post</button></div><div class="space-y-4">${content.posts.map(postCard).join("") || `<div class="admin-card text-sm text-slate-400">No posts yet. Create your first draft above.</div>`}</div>`);
+      } else if (activeTab === "messages") {
+        panel.innerHTML = section("Inbox","Messages sent from the public contact form. Only approved administrators can read them.",`<div class="flex justify-end"><button class="admin-action" data-refresh-messages>Refresh inbox</button></div><div class="space-y-3">${messages.map(m=>`<article class="admin-card"><div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-bold">${escapeHtml(m.name)}</h3><p class="mt-1 text-xs text-slate-400">${escapeHtml(m.email||"No email supplied")} · ${escapeHtml(new Date(m.created_at).toLocaleString())}</p></div><div class="flex gap-2">${m.read_at?`<span class="text-xs text-slate-500">Read</span>`:`<button class="admin-action" data-read="${escapeHtml(m.id)}">Mark read</button>`}<button class="admin-action admin-danger" data-delete-message="${escapeHtml(m.id)}">Delete</button></div></div><p class="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-300">${escapeHtml(m.message)}</p></article>`).join("") || `<div class="admin-card text-sm text-slate-400">No messages yet.</div>`}</div>`);
+      }
+    }
+    function normalizeArrays() {
+      content.profile.skills = String(content.profile.skills as any).split(",").map(s=>s.trim()).filter(Boolean);
+      content.profile.interests = String(content.profile.interests as any).split(",").map(s=>s.trim()).filter(Boolean);
+      content.profile.musicArtists = String(content.profile.musicArtists as any).split(",").map(s=>s.trim()).filter(Boolean);
+      content.profile.socials = content.profile.socials.map(s=>({...s,label:String(s.label||""),href:String(s.href||"")}));
+      content.projects = content.projects.map((p:any,i:number)=>({...p,tags:Array.isArray(p.tags)?p.tags:String(p.tags||"").split(",").map((x:string)=>x.trim()).filter(Boolean),order:i}));
+      content.posts = content.posts.map((p:any)=>({...p,tags:Array.isArray(p.tags)?p.tags:String(p.tags||"").split(",").map((x:string)=>x.trim()).filter(Boolean)}));
+    }
+    async function saveAll() {
+      if (!supabase) return;
+      collectInputs(); normalizeArrays(); status.textContent = "Saving content…";
+      const { error } = await supabase.from("site_content").upsert({id:"main",content,updated_at:new Date().toISOString()},{onConflict:"id"});
+      status.textContent = error ? `Save failed: ${error.message}` : "Saved successfully. Public pages will use the new content on the next request.";
+      if (!error) render();
+    }
+    async function loadMessages() {
+      if (!supabase) return;
+      const {data,error} = await supabase.from("contact_messages").select("id,name,email,message,created_at,read_at").order("created_at",{ascending:false}).limit(100);
+      if (error) { status.textContent = `Inbox error: ${error.message}`; return; }
+      messages = data || [];
+      const unread = messages.filter(m=>!m.read_at).length;
+      document.querySelector("#message-count")!.textContent = unread ? `(${unread})` : "";
+      if (activeTab === "messages") render();
+    }
+    async function verifyAdmin() {
+      if (!supabase) { loginStatus.textContent = "Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."; return; }
+      const {data:{user}} = await supabase.auth.getUser();
+      if (!user) return;
+      const {data,error} = await supabase.from("admin_users").select("user_id").eq("user_id",user.id).maybeSingle();
+      if (error || !data) { await supabase.auth.signOut(); loginStatus.textContent = "This account is not approved as an administrator."; return; }
+      loginView.classList.add("hidden"); dashboard.classList.remove("hidden");
+      document.querySelector("#admin-identity")!.textContent = `Signed in as ${user.email}`;
+      status.textContent = "Connected. Choose a section to manage your site.";
+      await loadMessages(); render();
+    }
+    if (supabaseUrl && supabaseKey && !supabaseUrl.includes("YOUR-PROJECT")) supabase = createClient(supabaseUrl,supabaseKey);
+    loginForm.addEventListener("submit",async event=>{
+      event.preventDefault();
+      if (!supabase) { loginStatus.textContent = "Supabase is not configured yet. See the setup guide in README.md."; return; }
+      const email = (document.querySelector<HTMLInputElement>("#login-email")!).value.trim();
+      const password = document.querySelector<HTMLInputElement>("#login-password")!.value;
+      loginStatus.textContent = "Signing in…";
+      const {error} = await supabase.auth.signInWithPassword({email,password});
+      if (error) { loginStatus.textContent = error.message; return; }
+      await verifyAdmin();
+    });
+    document.querySelector("#save-all")!.addEventListener("click",saveAll);
+    document.querySelector("#logout")!.addEventListener("click",async()=>{ await supabase?.auth.signOut(); dashboard.classList.add("hidden"); loginView.classList.remove("hidden"); loginStatus.textContent="Signed out."; });
+    document.querySelector("#admin-tabs")!.addEventListener("click",event=>{ const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-tab]"); if(!button)return; collectInputs(); normalizeArrays(); activeTab=button.dataset.tab!; document.querySelectorAll(".admin-tab").forEach(el=>el.classList.toggle("active",el===button)); if(activeTab==="messages") loadMessages(); render(); });
+    panel.addEventListener("input",event=>{ const el=event.target as HTMLElement; if(el.matches("[data-bind]")) { status.textContent="Unsaved changes"; } });
+    panel.addEventListener("change",async event=>{
+      const input=event.target as HTMLInputElement; const target=input.dataset.upload; const file=input.files?.[0]; if(!target||!file||!supabase)return;
+      if(!["image/png","image/jpeg","image/webp","image/avif","image/gif"].includes(file.type)){status.textContent="Use PNG, JPG, WebP, AVIF or GIF images.";return;}
+      if(file.size>8*1024*1024){status.textContent="Image must be 8 MB or smaller.";return;}
+      status.textContent="Uploading image securely…";
+      const cleanName=file.name.toLowerCase().replace(/[^a-z0-9._-]+/g,"-");
+      const path=`${Date.now()}-${crypto.randomUUID()}-${cleanName}`;
+      const {error}=await supabase.storage.from("site-assets").upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+      if(error){status.textContent=`Upload failed: ${error.message}`;return;}
+      const {data}=supabase.storage.from("site-assets").getPublicUrl(path);
+      collectInputs(); normalizeArrays(); setPath(target,data.publicUrl); render(); status.textContent="Image uploaded. Remember to click Save changes.";
+    });
+    panel.addEventListener("click",async event=>{
+      const target=event.target as HTMLElement;
+      const add=target.closest<HTMLElement>("[data-add]")?.dataset.add;
+      const remove=target.closest<HTMLElement>("[data-remove]")?.dataset.remove;
+      if(add){collectInputs();normalizeArrays(); if(add==="project")content.projects.push({id:crypto.randomUUID(),name:"New project",description:"Describe this project.",status:"In progress",tags:[],featured:true,order:content.projects.length}); if(add==="track")content.tracks.push({id:crypto.randomUUID(),title:"New track",artist:"Artist",src:"",cover:"",link:""}); if(add==="post")content.posts.push({id:crypto.randomUUID(),title:"Untitled post",slug:`post-${content.posts.length+1}`,excerpt:"",body:"",published:false,date:new Date().toISOString().slice(0,10),tags:[]}); if(add==="social")content.profile.socials.push({label:"Website",href:"https://"}); render();return;}
+      if(remove){collectInputs();normalizeArrays();const [key,indexText]=remove.split(".");const index=Number(indexText); if(key==="profile"){content.profile.socials.splice(index,1);}else (content as any)[key].splice(index,1);render();return;}
+      const readButton=target.closest<HTMLElement>("[data-read]"); if(readButton&&supabase){const id=readButton.dataset.read!;const {error}=await supabase.from("contact_messages").update({read_at:new Date().toISOString()}).eq("id",id);if(error)status.textContent=error.message;else await loadMessages();return;}
+      const deleteButton=target.closest<HTMLElement>("[data-delete-message]"); if(deleteButton&&supabase){if(!confirm("Delete this message permanently?"))return;const {error}=await supabase.from("contact_messages").delete().eq("id",deleteButton.dataset.deleteMessage!);if(error)status.textContent=error.message;else await loadMessages();return;}
+      if(target.closest("[data-refresh-messages]")) await loadMessages();
+    });
+    verifyAdmin();
+  </script>
+</MainLayout>

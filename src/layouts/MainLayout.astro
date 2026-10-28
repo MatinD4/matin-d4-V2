@@ -1,0 +1,64 @@
+---
+import "../styles/global.css";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const { title = content.seo.title || content.profile.brand, description = content.seo.description } = Astro.props;
+const path = Astro.url.pathname;
+const profile = content.profile;
+const theme = content.theme;
+const nav = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Projects", href: "/projects" },
+  { label: "Music", href: "/music" },
+  { label: "Contact", href: "/contact" },
+  ...(content.posts.some(post => post.published) ? [{ label: "Journal", href: "/journal" }] : [])
+];
+const fontEn = encodeURIComponent(theme.fontEnglish || "Inter").replace(/%20/g, "+");
+const fontFa = encodeURIComponent(theme.fontPersian || "Vazirmatn").replace(/%20/g, "+");
+const googleFonts = `https://fonts.googleapis.com/css2?family=${fontEn}:wght@400;500;600;700;800&family=${fontFa}:wght@400;500;600;700;800&display=swap`;
+---
+<!doctype html>
+<html lang="en" style={`--lime:${theme.accent};--bg:${theme.background};--panel:${theme.panel};--font-en:'${theme.fontEnglish}',Inter,system-ui,sans-serif;--font-fa:'${theme.fontPersian}',sans-serif;--radius:${theme.radius || "20"}px`}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="keywords" content={content.seo.keywords} />
+    <meta name="theme-color" content={theme.background} />
+    {content.seo.ogImage && <meta property="og:image" content={content.seo.ogImage} />}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href={googleFonts} rel="stylesheet" />
+    <link rel="icon" href={profile.logo || "/favicon.svg"} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-[#0b0d10]/85 backdrop-blur-xl">
+      <div class="container-shell flex min-h-[72px] items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-3" aria-label={`${profile.brand} home`}>
+          <span id="site-logo" class="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-[#b8f36b] font-mono font-black text-[#111318]">{profile.logo ? <img src={profile.logo} alt="Site logo" class="h-full w-full object-contain" /> : "D4"}</span>
+          <span class="font-semibold tracking-tight">{profile.brand}</span>
+        </a>
+        <nav class="hidden items-center gap-6 md:flex" aria-label="Main navigation">
+          {nav.map((item) => <a href={item.href} class:list={["text-sm transition hover:text-[#b8f36b]", path === item.href ? "text-[#b8f36b]" : "text-slate-300"]}>{item.label}</a>)}
+        </nav>
+        <a href="/contact" class="btn-secondary !px-3 !py-2 text-sm">Say hello ↗</a>
+      </div>
+      <nav class="container-shell flex gap-5 overflow-x-auto pb-3 md:hidden" aria-label="Mobile navigation">
+        {nav.map((item) => <a href={item.href} class:list={["shrink-0 text-sm", path === item.href ? "lime" : "text-slate-300"]}>{item.label}</a>)}
+      </nav>
+    </header>
+    <main><slot /></main>
+    <footer class="mt-24 border-t border-white/10">
+      <div class="container-shell flex flex-col gap-4 py-8 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <p>© {new Date().getFullYear()} {profile.brand}. Built with curiosity.</p>
+        <div class="flex flex-wrap gap-4">
+          {profile.socials.map((social) => <a href={social.href} target="_blank" rel="noreferrer" class="hover:text-[#b8f36b]">{social.label}</a>)}
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

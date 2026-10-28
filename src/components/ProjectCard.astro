@@ -1,0 +1,18 @@
+---
+import type { Project } from "../data/site";
+const { project } = Astro.props as { project: Project };
+---
+<article class="panel group overflow-hidden transition duration-200 hover:-translate-y-1 hover:border-[#b8f36b]/30">
+  <div class="project-image relative grid aspect-[16/9] place-items-center overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(184,243,107,.13),transparent_55%),#101419]">
+    {project.image
+      ? <img src={project.image} alt={`${project.name} screenshot`} class="h-full w-full object-cover" loading="lazy" />
+      : <div class="px-6 text-center"><div class="mb-2 font-mono text-4xl font-black text-[#b8f36b]">{project.name === "I Ticket" ? "iT" : project.name === "Ayar" ? "عيار" : "D4"}</div><p class="text-xs uppercase tracking-[.2em] text-slate-500">Project preview</p></div>}
+    <span class="absolute right-3 top-3 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-xs text-slate-200">{project.status}</span>
+  </div>
+  <div class="p-5">
+    <div class="mb-2 flex items-start justify-between gap-3"><h3 class="text-xl font-bold">{project.name}</h3><span class="lime">↗</span></div>
+    <p class="mb-4 min-h-12 text-sm leading-6 text-slate-400">{project.description}</p>
+    <div class="flex flex-wrap gap-2">{project.tags.map(tag => <span class="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-slate-300">{tag}</span>)}</div>
+    {(project.url || project.repo) && <div class="mt-4 flex flex-wrap gap-4">{project.url && <a class="inline-block text-sm font-semibold text-[#b8f36b]" href={project.url} target="_blank" rel="noreferrer">Open project ↗</a>}{project.repo && <a class="inline-block text-sm font-semibold text-slate-300 hover:text-white" href={project.repo} target="_blank" rel="noreferrer">Source code ↗</a>}</div>}
+  </div>
+</article>

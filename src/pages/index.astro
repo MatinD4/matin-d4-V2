@@ -1,0 +1,43 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import ProjectCard from "../components/ProjectCard.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const { profile, projects, homepage: home } = content;
+const featuredProjects = projects.filter(project => project.featured !== false).slice(0, 3);
+const lines = home.headline.split("\n");
+---
+<MainLayout title={content.seo.title} description={content.seo.description}>
+  <section class="container-shell grid min-h-[76vh] items-center gap-12 py-16 md:grid-cols-[1.25fr_.75fr] md:py-24">
+    <div>
+      <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-3 py-2 text-xs text-slate-300"><span class="h-2 w-2 rounded-full bg-[#b8f36b]"></span>{home.status}</div>
+      <p class="eyebrow mb-4">{home.eyebrow}</p>
+      <h1 class="max-w-3xl text-5xl font-black leading-[1.02] tracking-[-.065em] sm:text-6xl lg:text-7xl">{lines.map((line) => <span class="block">{line}</span>)}</h1>
+      <p class="mt-6 max-w-xl text-lg leading-8 text-slate-400">{home.subheadline || profile.bio}</p>
+      <div class="mt-8 flex flex-wrap gap-3"><a href="/projects" class="btn-primary">{home.ctaPrimary} ↗</a><a href="/contact" class="btn-secondary">{home.ctaSecondary}</a></div>
+      <div class="mt-10 flex flex-wrap gap-3">{profile.skills.map(skill => <span class="rounded-lg border border-white/10 bg-white/[.025] px-3 py-2 font-mono text-xs text-slate-300">{skill}</span>)}</div>
+    </div>
+    {home.showCodeCard && <div class="panel relative overflow-hidden p-5 sm:p-7">
+      <div class="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#b8f36b]/10 blur-3xl"></div>
+      <div class="relative">
+        <div class="mb-5 flex items-center justify-between"><span class="font-mono text-xs text-slate-500">~/matin-d4/profile.ts</span><span class="flex gap-1.5"><i class="h-2.5 w-2.5 rounded-full bg-red-400"></i><i class="h-2.5 w-2.5 rounded-full bg-yellow-300"></i><i class="h-2.5 w-2.5 rounded-full bg-[#b8f36b]"></i></span></div>
+        <pre class="overflow-x-auto text-sm leading-7"><code><span class="text-purple-300">const</span> <span class="lime">matin</span> = {'{'}
+  role: <span class="text-amber-200">"{profile.role}"</span>,
+  loves: [
+    {profile.interests.slice(0,3).map((interest, i) => <span class="block"><span class="text-amber-200">"{interest}"</span>{i < Math.min(profile.interests.length,3)-1 ? "," : ""}</span>)}
+  ],
+  mindset: <span class="text-amber-200">"always learning"</span>,
+  nextStep: <span class="text-amber-200">"build something cool"</span>
+{'}'};</code></pre>
+        <div class="mt-6 rounded-xl border border-white/10 bg-black/20 p-4"><p class="mb-2 text-xs text-slate-500">CURRENTLY EXPLORING</p><p class="font-semibold">Ideas → Code → Real projects <span class="lime">▌</span></p></div>
+      </div>
+    </div>}
+  </section>
+  <section class="container-shell py-12">
+    <div class="mb-7 flex items-end justify-between gap-4"><div><p class="eyebrow mb-2">Selected work</p><h2 class="section-title">Projects I'm building</h2></div><a href="/projects" class="text-sm text-[#b8f36b]">All projects ↗</a></div>
+    <div class="grid gap-5 md:grid-cols-3">{featuredProjects.map(project => <ProjectCard project={project} />)}</div>
+  </section>
+  <section class="container-shell mt-12">
+    <div class="panel flex flex-col items-start justify-between gap-6 p-7 sm:flex-row sm:items-center sm:p-10"><div><p class="eyebrow mb-2">Have an idea?</p><h2 class="text-2xl font-bold tracking-tight sm:text-3xl">{home.contactTitle}</h2><p class="mt-2 text-slate-400">{home.contactText}</p></div><a href="/contact" class="btn-primary shrink-0">Contact me ↗</a></div>
+  </section>
+</MainLayout>

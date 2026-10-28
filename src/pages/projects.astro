@@ -1,0 +1,15 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import ProjectCard from "../components/ProjectCard.astro";
+import { getSiteContent } from "../lib/content";
+const content = await getSiteContent();
+const projects = [...content.projects].sort((a,b)=>(a.order ?? 0)-(b.order ?? 0));
+---
+<MainLayout title={`Projects — ${content.profile.brand}`} description={content.pages.projectsIntro}>
+  <section class="container-shell py-16 sm:py-24">
+    <p class="eyebrow mb-3">Things I've made / am making</p><h1 class="section-title text-5xl sm:text-6xl">Selected <span class="lime">projects.</span></h1>
+    <p class="mt-5 max-w-2xl leading-7 text-slate-400">{content.pages.projectsIntro}</p>
+    <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{projects.map(project => <ProjectCard project={project} />)}</div>
+    <div class="panel mt-8 p-6"><p class="text-slate-300">Want to see a project featured here? <a href="/contact" class="lime underline underline-offset-4">Get in touch.</a></p></div>
+  </section>
+</MainLayout>
