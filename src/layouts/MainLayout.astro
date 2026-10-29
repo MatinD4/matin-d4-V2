@@ -56,7 +56,7 @@ const googleFonts = `https://fonts.googleapis.com/css2?family=${fontEn}:wght@400
       <div class="container-shell flex flex-col gap-4 py-8 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
         <p>© {new Date().getFullYear()} {profile.brand}. Built with curiosity.</p>
         <div class="flex flex-wrap gap-4">
-          {profile.socials.map((social) => <a href={social.href} target="_blank" rel="noreferrer" class="hover:text-[#b8f36b]">{social.label}</a>)}
+          {profile.socials.map((social) => <a href={social.href} target="_blank" rel="noreferrer" class="group inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 transition hover:border-[var(--lime)]/40 hover:text-[var(--lime)]"><span class="grid h-6 w-6 place-items-center rounded-md border border-white/10 font-mono text-[10px] font-bold text-slate-300 transition group-hover:border-[var(--lime)]/30 group-hover:text-[var(--lime)]">{social.label.slice(0,2).toUpperCase()}</span><span>{social.label}</span></a>)}
         </div>
       </div>
     </footer>

@@ -8,6 +8,7 @@ export type SiteContent = {
   homepage: { eyebrow: string; headline: string; subheadline: string; status: string; ctaPrimary: string; ctaSecondary: string; showCodeCard: boolean; contactTitle: string; contactText: string };
   projects: Array<{ id: string; name: string; description: string; status: string; tags: string[]; image?: string; url?: string; repo?: string; featured?: boolean; order?: number }>;
   tracks: Array<{ id: string; title: string; artist: string; src?: string; cover?: string; link?: string }>;
+  games: Array<{ id: string; name: string; subtitle: string; mark: string; url?: string }>;
   posts: Array<{ id: string; title: string; slug: string; excerpt: string; body: string; cover?: string; published: boolean; date: string; tags: string[] }>;
   pages: { aboutIntro: string; aboutMindset: string; projectsIntro: string; musicIntro: string; contactIntro: string };
 };
@@ -19,6 +20,11 @@ export const defaultContent: SiteContent = {
   homepage: { eyebrow: "Personal corner of the internet", headline: "Hey, I'm Matin.\nI build things\nfor the web.", subheadline: fallbackProfile.bio, status: "Building, learning, repeating.", ctaPrimary: "Explore projects", ctaSecondary: "Get in touch", showCodeCard: true, contactTitle: "Let's make something interesting.", contactText: "Find me on my social platforms or send a message." },
   projects: fallbackProjects.map((p, i) => ({ ...p, id: ["i-ticket", "d4-vpns", "ayar"][i] || `project-${i + 1}`, featured: true, order: i })),
   tracks: fallbackTracks.map((t, i) => ({ ...t, id: `track-${i + 1}` })),
+  games: [
+    { id: "minecraft", name: "Minecraft", subtitle: "Build · Explore · Create", mark: "M", url: "https://www.minecraft.net/" },
+    { id: "cs2", name: "Counter-Strike 2", subtitle: "Tactical FPS", mark: "CS", url: "https://www.counter-strike.net/cs2" },
+    { id: "marvel-rivals", name: "Marvel Rivals", subtitle: "Team-based action", mark: "MR", url: "https://www.marvelrivals.com/" }
+  ],
   posts: [],
   pages: { aboutIntro: "Learn more about Matin, his skills, interests, and music.", aboutMindset: "Stay curious.\nKeep building.\nLearn by doing.", projectsIntro: "A collection of experiments, ideas, and projects. Some are still in progress; more details and screenshots will be added as they become available.", musicIntro: `Music I enjoy: ${fallbackProfile.musicArtists.join(", ")}.`, contactIntro: "Have a question, an idea, or want to talk about a project? You can find me on these platforms." }
 };
@@ -42,6 +48,7 @@ export async function getSiteContent(): Promise<SiteContent> {
       pages: { ...defaultContent.pages, ...(saved.pages || {}) },
       projects: Array.isArray(saved.projects) ? saved.projects : defaultContent.projects,
       tracks: Array.isArray(saved.tracks) ? saved.tracks : defaultContent.tracks,
+      games: Array.isArray(saved.games) ? saved.games : defaultContent.games,
       posts: Array.isArray(saved.posts) ? saved.posts : defaultContent.posts
     };
   } catch {

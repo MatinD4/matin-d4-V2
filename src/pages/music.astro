@@ -16,7 +16,7 @@ const tracks = content.tracks;
           <audio id="audio" preload="metadata" class="hidden"></audio>
           <div class="mt-6"><input id="seek" aria-label="Track progress" type="range" min="0" max="100" value="0" class="w-full accent-[#b8f36b]"/><div class="flex justify-between text-xs text-slate-500"><span id="current-time">0:00</span><span id="duration">0:00</span></div></div>
           <div class="mt-5 flex items-center justify-center gap-5"><button id="prev" class="btn-secondary" aria-label="Previous track">|◀</button><button id="play" class="btn-primary min-w-28" aria-label="Play or pause">▶ Play</button><button id="next" class="btn-secondary" aria-label="Next track">▶|</button></div>
-          <p id="player-note" class="mt-4 text-center text-xs text-slate-500">No audio files configured yet.</p>
+          <p id="player-note" class="mt-4 text-center text-xs text-slate-500">Your own audio, hosted on this site.</p>
         </div>
       </div>
       <div class="mt-8 border-t border-white/10 pt-5"><h3 class="mb-3 text-sm font-semibold">Playlist</h3><div id="playlist" class="space-y-2"></div></div>
@@ -33,7 +33,7 @@ const tracks = content.tracks;
     const note = document.querySelector<HTMLElement>("#player-note")!;
     const playlist = document.querySelector<HTMLElement>("#playlist")!;
     const time = (seconds: number) => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2, "0")}`;
-    const playable = tracks.filter(track => track.src && /^https?:\/\//i.test(track.src));
+    const playable = tracks.filter(track => track.src && (/^https?:\/\//i.test(track.src) || /^\/(?:music|storage\/v1\/object\/public\/site-assets)\//i.test(track.src)));
     let current = 0;
     function load(index: number) {
       if (!playable.length) return;
@@ -44,8 +44,8 @@ const tracks = content.tracks;
       [...playlist.children].forEach((item, i) => item.classList.toggle("border-[#b8f36b]/50", i === current));
     }
     function renderPlaylist() {
-      if (!playable.length) { playlist.innerHTML = '<p class="rounded-lg border border-dashed border-white/10 p-4 text-sm text-slate-500">No playable tracks yet. Add a public audio URL in the private control room.</p>'; playButton.disabled = true; playButton.classList.add("opacity-50"); note.textContent = tracks.length ? "Add a valid public audio URL to each track." : "No tracks configured yet."; return; }
-      playlist.replaceChildren(); playable.forEach((track, i) => { const button=document.createElement("button"); button.className="flex w-full items-center justify-between gap-4 rounded-lg border border-white/10 px-4 py-3 text-left text-sm hover:border-[#b8f36b]/40"; button.textContent=`${String(i+1).padStart(2,"0")}  ${track.title} — ${track.artist}`; button.addEventListener("click",async()=>{load(i);try{await audio.play();}catch{note.textContent="Playback failed. Check the audio URL.";}}); playlist.appendChild(button); }); load(0); note.textContent="Ready to play.";
+      if (!playable.length) { playlist.innerHTML = '<p class="rounded-lg border border-dashed border-white/10 p-4 text-sm text-slate-500">No playable tracks yet. Add an audio file in the private control room or use a public audio URL.</p>'; playButton.disabled = true; playButton.classList.add("opacity-50"); note.textContent = tracks.length ? "Upload an audio file or add a valid public audio URL to each track." : "No tracks configured yet."; return; }
+      playlist.replaceChildren(); playable.forEach((track, i) => { const button=document.createElement("button"); button.className="flex w-full items-center justify-between gap-4 rounded-lg border border-white/10 px-4 py-3 text-left text-sm hover:border-[#b8f36b]/40"; button.textContent=`${String(i+1).padStart(2,"0")}  ${track.title} — ${track.artist}`; button.addEventListener("click",async()=>{load(i);try{await audio.play();}catch{note.textContent="Playback failed. Check the audio URL.";}}); playlist.appendChild(button); }); load(0); note.textContent="Ready when you are.";
     }
     playButton.addEventListener("click",async()=>{if(!playable.length)return;if(audio.paused){try{await audio.play();}catch{note.textContent="Playback failed. Check the audio URL.";}}else audio.pause();});
     document.querySelector("#prev")?.addEventListener("click",()=>{if(playable.length){load(current-1);audio.play().catch(()=>{});}});

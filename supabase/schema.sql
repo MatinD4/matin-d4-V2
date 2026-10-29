@@ -50,10 +50,10 @@ create policy "Admins can update contact messages" on public.contact_messages fo
 drop policy if exists "Admins can delete contact messages" on public.contact_messages;
 create policy "Admins can delete contact messages" on public.contact_messages for delete to authenticated using (public.is_site_admin());
 
--- Public image bucket; uploads and deletes are restricted to approved admin users.
+-- Public media bucket for images and licensed audio; uploads and deletes are restricted to approved admin users.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('site-assets', 'site-assets', true, 8388608, array['image/png','image/jpeg','image/webp','image/avif','image/gif'])
-on conflict (id) do update set public = true, file_size_limit = 8388608, allowed_mime_types = excluded.allowed_mime_types;
+values ('site-assets', 'site-assets', true, 26214400, array['image/png','image/jpeg','image/webp','image/avif','image/gif','audio/mpeg','audio/mp3','audio/mp4','audio/aac','audio/ogg','audio/wav','audio/webm','audio/flac','audio/x-m4a'])
+on conflict (id) do update set public = true, file_size_limit = 26214400, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Public can view site assets" on storage.objects;
 create policy "Public can view site assets" on storage.objects for select to anon, authenticated using (bucket_id = 'site-assets');

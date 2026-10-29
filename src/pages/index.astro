@@ -15,7 +15,7 @@ const lines = home.headline.split("\n");
       <h1 class="max-w-3xl text-5xl font-black leading-[1.02] tracking-[-.065em] sm:text-6xl lg:text-7xl">{lines.map((line) => <span class="block">{line}</span>)}</h1>
       <p class="mt-6 max-w-xl text-lg leading-8 text-slate-400">{home.subheadline || profile.bio}</p>
       <div class="mt-8 flex flex-wrap gap-3"><a href="/projects" class="btn-primary">{home.ctaPrimary} ↗</a><a href="/contact" class="btn-secondary">{home.ctaSecondary}</a></div>
-      <div class="mt-10 flex flex-wrap gap-3">{profile.skills.map(skill => <span class="rounded-lg border border-white/10 bg-white/[.025] px-3 py-2 font-mono text-xs text-slate-300">{skill}</span>)}</div>
+      <div class="mt-10 flex flex-wrap gap-3">{profile.skills.map(skill => <span class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[.025] px-3 py-2 text-xs text-slate-300"><span class="grid h-5 w-5 place-items-center rounded border border-[var(--lime)]/25 font-mono text-[9px] font-bold lime">{skill.split(/[ +.-]/).map(part=>part[0]).join("").slice(0,2).toUpperCase()}</span>{skill}</span>)}</div>
     </div>
     {home.showCodeCard && <div class="panel relative overflow-hidden p-5 sm:p-7">
       <div class="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#b8f36b]/10 blur-3xl"></div>
